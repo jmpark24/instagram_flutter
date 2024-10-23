@@ -2,10 +2,18 @@ import 'package:flutter/material.dart';
 import './style.dart' as style;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter/rendering.dart';
+// import 'package:flutter/rendering.dart';
 
 void main() {
-  runApp(MaterialApp(theme: style.theme, home: const MyApp()));
+  runApp(MaterialApp(
+      theme: style.theme,
+      // initialRoute: '/',
+      // routes: {
+      //   '/': (context) => Text('첫페이지'),
+      //   '/detail': (context) => Text('둘째페이지')
+      // },
+      // Navigator.pushNamed(context,'/detail') 이런식으로 이동시킬 수 있음
+      home: const MyApp()));
 }
 
 var likeFontWeight = TextStyle(fontWeight: FontWeight.w600);
@@ -21,6 +29,7 @@ class _MyAppState extends State<MyApp> {
   var tab = 0;
   var list = [1, 2, 3];
   List<dynamic> data = [];
+  int morePage = 1;
 
   getData() async {
     http.Response result = await http
@@ -32,7 +41,20 @@ class _MyAppState extends State<MyApp> {
         data = result2;
       });
     }
-    ;
+  }
+
+  getMoreData() async {
+    http.Response result = await http.get(
+        Uri.parse('https://codingapple1.github.io/app/more$morePage.json'));
+    if (result.statusCode == 200) {
+      dynamic result2 = jsonDecode(result.body);
+      setState(() {
+        if (data[data.length - 1]['id'] != result2['id']) {
+          data.add(result2);
+          morePage++;
+        }
+      });
+    }
   }
 
   @override
@@ -49,14 +71,17 @@ class _MyAppState extends State<MyApp> {
         title: Text('Instagram'),
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                  context, MaterialPageRoute(builder: (context) => Upload()));
+            },
             icon: Icon(Icons.add_box_outlined),
             iconSize: 30,
           )
         ],
         shape: Border(bottom: BorderSide(color: Colors.black12, width: 1)),
       ),
-      body: [Home(data: data), Text('샵페이지')][tab],
+      body: [Home(data: data, getMoreData: getMoreData), Text('샵페이지')][tab],
 
       // style: Theme.of(context)
       //     .textTheme
@@ -84,19 +109,37 @@ class _MyAppState extends State<MyApp> {
 }
 
 class Home extends StatefulWidget {
-  const Home({super.key, this.data});
+  const Home({super.key, this.data, this.getMoreData});
   final data;
+  final getMoreData;
 
   @override
   State<Home> createState() => _HomeState();
 }
 
 class _HomeState extends State<Home> {
+  ScrollController scroll = ScrollController();
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    scroll.addListener(() {
+      // print(scroll.position.pixels);
+      // print(scroll.position.userScrollDirection);
+      // print(scroll.position.maxScrollExtent);
+      if (scroll.position.pixels == scroll.position.maxScrollExtent) {
+        widget.getMoreData();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.data.isNotEmpty) {
       return ListView.builder(
           itemCount: widget.data.length,
+          controller: scroll,
           itemBuilder: (c, i) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,6 +228,28 @@ class _FavoriteState extends State<Favorite> {
         ),
         Text(widget.data['likes'].toString())
       ],
+    );
+  }
+}
+
+class Upload extends StatelessWidget {
+  const Upload({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('이미지업로드화면'),
+          IconButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              icon: Icon(Icons.close))
+        ],
+      ),
     );
   }
 }
